@@ -1,0 +1,149 @@
+import textwrap
+from datetime import datetime
+
+class Usuario:
+    def __init__(self, nome, data_nascimento, cpf, endereco):
+        self.nome = nome
+        self.data_nascimento = data_nascimento
+        self.cpf = cpf
+        self.endereco = endereco
+
+class ContaCorrente:
+    LIMITE_SAQUES = 3
+    LIMITE_VALOR = 500
+
+    def __init__(self, agencia, numero, usuario):
+        self.agencia = agencia
+        self.numero = numero
+        self.usuario = usuario
+        self.saldo = 0
+        self.extrato = []
+        self.numero_saques = 0
+
+    def depositar(self, valor):
+        if valor > 0:
+            self.saldo += valor
+            data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            self.extrato.append(f"[{data}] Depósito: R$ {valor:.2f}")
+            print("Depósito realizado com sucesso!")
+        else:
+            print("Operação falhou! Valor inválido.")
+
+    def sacar(self, valor):
+        if valor <= 0:
+            print("Operação falhou! Valor inválido.")
+        elif valor > self.saldo:
+            print(f"Operação falhou! Saldo insuficiente. Saldo atual: R$ {self.saldo:.2f}")
+        elif valor > self.LIMITE_VALOR:
+            print(f"Operação falhou! Limite de R$ {self.LIMITE_VALOR:.2f} por saque.")
+        elif self.numero_saques >= self.LIMITE_SAQUES:
+            print("Operação falhou! Número máximo de saques diários atingido.")
+        else:
+            self.saldo -= valor
+            self.numero_saques += 1
+            data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            self.extrato.append(f"[{data}] Saque: R$ {valor:.2f}")
+            print("Saque realizado com sucesso!")
+
+    def exibir_extrato(self):
+        print("\n========== EXTRATO ==========")
+        if not self.extrato:
+            print("Não foram realizadas transações.")
+        else:
+            for linha in self.extrato:
+                print(linha)
+        print(f"\nSaldo atual: R$ {self.saldo:.2f}")
+        print("==================================")
+
+class Banco:
+    def __init__(self):
+        self.usuarios = []
+        self.contas = []
+        self.AGENCIA = "0001"
+
+    def criar_usuario_e_conta(self):
+        print("\nVamos criar seu cadastro e uma nova conta.")
+        cpf = input("Informe o CPF (somente números): ")
+        if self.buscar_usuario(cpf):
+            print("Já existe um usuário com esse CPF.")
+            return
+
+        nome = input("Informe seu nome completo: ")
+        data_nascimento = input("Informe sua data de nascimento (dd-mm-aaaa): ")
+        endereco = input("Informe seu endereço completo (logradouro, número - bairro - cidade/UF): ")
+
+        usuario = Usuario(nome, data_nascimento, cpf, endereco)
+        self.usuarios.append(usuario)
+
+        numero_conta = len(self.contas) + 1
+        conta = ContaCorrente(self.AGENCIA, numero_conta, usuario)
+        self.contas.append(conta)
+
+        print(f"\nUsuário e conta criados com sucesso! Número da conta: {numero_conta}")
+
+    def buscar_usuario(self, cpf):
+        return next((u for u in self.usuarios if u.cpf == cpf), None)
+
+    def autenticar_usuario(self):
+        print("\nPor favor, faça login para continuar.")
+        cpf = input("Informe seu CPF: ")
+        nome = input("Informe seu nome completo: ")
+        conta = next((c for c in self.contas if c.usuario.cpf == cpf and c.usuario.nome.lower() == nome.lower()), None)
+        if conta:
+            print(f"\nBem-vindo(a), {conta.usuario.nome}!")
+            return conta
+        else:
+            print("Autenticação falhou! Verifique CPF e nome.")
+            return None
+
+    def menu_transacoes(self, conta):
+        while True:
+            opcao = input(textwrap.dedent("""
+            \n========= MENU DE TRANSAÇÕES =========
+            [Depositar]  Fazer um depósito
+            [Sacar]      Realizar um saque
+            [Extrato]    Visualizar extrato
+            [Sair]       Sair da conta
+            => """)).strip().lower()
+
+            if opcao == "depositar":
+                valor = float(input("Informe o valor do depósito: "))
+                conta.depositar(valor)
+
+            elif opcao == "sacar":
+                valor = float(input("Informe o valor do saque: "))
+                conta.sacar(valor)
+
+            elif opcao == "extrato":
+                conta.exibir_extrato()
+
+            elif opcao == "sair":
+                print("Você saiu da conta. Retornando ao menu principal...")
+                break
+
+            else:
+                print("Opção inválida. Tente novamente.")
+
+    def menu_principal(self):
+        while True:
+            print("\n========= SISTEMA BANCÁRIO =========")
+            escolha = input("Você já possui conta? (sim/não ou sair): ").strip().lower()
+
+            if escolha == "sim":
+                conta = self.autenticar_usuario()
+                if conta:
+                    self.menu_transacoes(conta)
+
+            elif escolha == "não":
+                self.criar_usuario_e_conta()
+
+            elif escolha == "sair":
+                print("Obrigado por utilizar o sistema bancário!")
+                break
+
+            else:
+                print("Entrada inválida. Digite 'sim', 'não' ou 'sair'.")
+
+if __name__ == "__main__":
+    banco = Banco()
+    banco.menu_principal()
